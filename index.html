@@ -1,0 +1,79 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Searchable Plant List</title>
+  <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2"></script>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    input[type="text"] { width: 100%; padding: 10px; font-size: 16px; margin-bottom: 20px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 8px 12px; border: 1px solid #ccc; text-align: left; }
+    th { background-color: #f4f4f4; }
+    #loading { font-style: italic; color: gray; }
+  </style>
+</head>
+<body>
+  <h2>Search Plants by Name or Pot Size</h2>
+  <input type="text" id="searchBox" placeholder="Type keywords like 'moonchimes #01 abutilon'...">
+  <p id="loading">Loading plant data, please wait...</p>
+  <table>
+    <thead>
+      <tr><th>Plant</th><th>Price</th></tr>
+    </thead>
+    <tbody id="results"></tbody>
+  </table>
+
+  <script>
+    let data = [];
+
+    fetch('plants.json')
+      .then(response => response.json())
+      .then(json => {
+        data = json;
+        document.getElementById("loading").style.display = "none";
+
+        const fuse = new Fuse(data, {
+          keys: ['Plant'],
+          threshold: 0.4,
+          ignoreLocation: true
+        });
+
+        const resultsTable = document.getElementById("results");
+        const searchBox = document.getElementById("searchBox");
+
+        function renderResults(results) {
+          resultsTable.innerHTML = "";
+          const toDisplay = results.slice(0, 100); // display max 100 results
+          toDisplay.forEach(item => {
+            const row = `<tr><td>${item.item.Plant}</td><td>$${item.item.Price}</td></tr>`;
+            resultsTable.innerHTML += row;
+          });
+          if (results.length > 100) {
+            const moreRow = `<tr><td colspan="2">Only showing first 100 results out of ${results.length}. Refine your search for more specific matches.</td></tr>`;
+            resultsTable.innerHTML += moreRow;
+          }
+        }
+
+        renderResults(data.map(d => ({ item: d })));
+
+        searchBox.addEventListener("input", () => {
+          const searchTerm = searchBox.value.trim();
+          if (searchTerm === "") {
+            renderResults(data.map(d => ({ item: d })));
+          } else {
+            const results = fuse.search(searchTerm);
+            renderResults(results);
+          }
+        });
+
+        console.log("✅ Plant data loaded and search ready.");
+      })
+      .catch(err => {
+        document.getElementById("loading").innerText = "❌ Failed to load plant data.";
+        console.error("❌ Error loading plants.json:", err);
+      });
+  </script>
+</body>
+</html>
